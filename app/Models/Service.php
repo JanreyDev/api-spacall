@@ -13,7 +13,19 @@ class Service extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['category_id','name','slug','description','duration_minutes','base_price','is_active','meta'];
+    protected $fillable = [
+        'category_id', 'name', 'slug', 'description', 'short_description',
+        'currency', 'image_url', 'benefits', 'contraindications',
+        'duration_minutes', 'base_price', 'sort_order', 'is_active', 'meta'
+    ];
+
+    protected $casts = [
+        'benefits' => 'array',
+        'contraindications' => 'array',
+        'meta' => 'array',
+        'is_active' => 'boolean',
+        'base_price' => 'decimal:2',
+    ];
 
     protected static function booted(): void
     {

@@ -17,3 +17,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/forgot-pin', [AuthController::class, 'forgotPin']);
     Route::post('/reset-pin', [AuthController::class, 'resetPin']);
 });
+
+// Services (Protected)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/services', [\App\Http\Controllers\Api\ServiceController::class, 'index']);
+    Route::get('/services/{slug}', [\App\Http\Controllers\Api\ServiceController::class, 'show']);
+});
