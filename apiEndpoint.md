@@ -65,7 +65,14 @@ Authenticate an existing user.
 
 ### 2.1 My Bookings List
 - **GET** `/api/bookings`
-- **Description**: List all bookings made by the client.
+- **Description**: Returns all bookings for the authenticated client, separated into categories.
+- **Response**:
+```json
+{
+  "current": [ { "id": 1, "status": "pending", "booking_number": "SPC-..." } ],
+  "history": [ { "id": 2, "status": "completed", "booking_number": "SPC-..." } ]
+}
+```
 
 ### 2.2 Find Available Therapists
 Find therapists within a 10km radius.
@@ -114,7 +121,14 @@ Fetch full details (bio, specializations, all services) before booking.
 
 ### 3.1 Manage My Jobs
 - **GET** `/api/bookings`
-- **Description**: List all bookings assigned to this therapist. Includes detailed customer and location information.
+- **Description**: List all bookings assigned to this therapist, separated into active and past jobs.
+- **Response**:
+```json
+{
+  "current": [ { "id": 1, "status": "accepted", "booking_number": "SPC-..." } ],
+  "history": [ { "id": 2, "status": "completed", "booking_number": "SPC-..." } ]
+}
+```
 
 ### 3.2 Update Booking Status
 - **PATCH** `/api/bookings/{id}/status`

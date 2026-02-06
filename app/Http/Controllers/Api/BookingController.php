@@ -32,8 +32,16 @@ class BookingController extends Controller
 
         $bookings = $query->orderBy('created_at', 'desc')->get();
 
+        // Categorize bookings
+        $historyStatuses = ['completed', 'cancelled', 'no_show', 'expired'];
+        
+        $partitioned = $bookings->partition(function ($booking) use ($historyStatuses) {
+            return in_array($booking->status, $historyStatuses);
+        });
+
         return response()->json([
-            'bookings' => $bookings
+            'current' => $partitioned[1]->values(), // Not in history
+            'history' => $partitioned[0]->values(), // In history
         ]);
     }
 
@@ -103,19 +111,32 @@ class BookingController extends Controller
             return response()->json(['message' => 'Therapist is no longer available.'], 422);
         }
 
+        // Get therapist-specific price from pivot table
+        $serviceDetails = $provider->services()->where('service_id', $service->id)->first();
+        $actualPrice = $serviceDetails ? $serviceDetails->pivot->price : $service->base_price;
+
+        $customer = $request->user();
+        if ($customer->wallet_balance < $actualPrice) {
+            return response()->json([
+                'message' => 'Insufficient wallet balance.',
+                'required' => $actualPrice,
+                'current' => $customer->wallet_balance
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
             $booking = Booking::create([
-                'customer_id' => $request->user()->id,
+                'customer_id' => $customer->id,
                 'provider_id' => $provider->id,
                 'service_id' => $service->id,
                 'booking_type' => 'home_service',
                 'schedule_type' => 'now',
                 'status' => 'pending',
-                'service_price' => $service->base_price,
-                'total_amount' => $service->base_price, // Simplifying for now
+                'service_price' => $actualPrice,
+                'total_amount' => $actualPrice,
                 'customer_notes' => $request->customer_notes,
-                'payment_method' => 'cash', // Default for now
+                'payment_method' => 'wallet',
             ]);
 
             BookingLocation::create([
@@ -127,7 +148,7 @@ class BookingController extends Controller
                 'longitude' => $request->longitude,
             ]);
 
-            // Set therapist to unavailable once booked (simplified logic)
+            // Set therapist to unavailable once booked
             $provider->update(['is_available' => false]);
 
             DB::commit();
@@ -149,9 +170,11 @@ class BookingController extends Controller
     public function updateStatus(Request $request, $id): JsonResponse
     {
         $booking = Booking::findOrFail($id);
-        
-        // Ensure only the assigned provider can update
-        if ($booking->provider_id !== $request->user()->providers()->first()?->id) {
+        $user = $request->user();
+        $isTherapist = ($user->role === 'therapist');
+        $isCustomer = ($user->id === $booking->customer_id);
+
+        if (!$isTherapist && !$isCustomer) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -163,28 +186,77 @@ class BookingController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $oldStatus = $booking->status;
         $newStatus = $request->status;
 
-        $booking->update(['status' => $newStatus]);
-
-        if ($newStatus === 'accepted') {
-            $booking->update(['accepted_at' => now()]);
-        } elseif ($newStatus === 'in_progress') {
-            $booking->update(['started_at' => now()]);
-        } elseif ($newStatus === 'completed') {
-            $booking->update(['completed_at' => now()]);
-            // Make therapist available again
-            $booking->provider->update(['is_available' => true]);
-        } elseif ($newStatus === 'cancelled') {
-            $booking->update(['cancelled_at' => now(), 'cancelled_by' => 'provider']);
-            $booking->provider->update(['is_available' => true]);
+        // Role-based Restrictions
+        if ($isCustomer && !in_array($newStatus, ['completed', 'cancelled'])) {
+            return response()->json(['message' => 'Customers can only mark as completed or cancelled.'], 403);
         }
 
-        return response()->json([
-            'message' => 'Status updated successfully',
-            'booking' => $booking
-        ]);
+        DB::beginTransaction();
+        try {
+            if ($newStatus === 'accepted' && $isTherapist) {
+                $booking->update(['status' => 'accepted', 'accepted_at' => now()]);
+            } elseif ($newStatus === 'en_route' && $isTherapist) {
+                $booking->update(['status' => 'en_route']);
+            } elseif ($newStatus === 'in_progress' && $isTherapist) {
+                $booking->update(['status' => 'in_progress', 'started_at' => now()]);
+            } elseif ($newStatus === 'completed') {
+                if ($isTherapist) {
+                    // Therapist says they are done
+                    $booking->update(['status' => 'completed', 'completed_at' => now()]);
+                    $booking->provider->update(['is_available' => true]);
+                    
+                    // Note: Money doesn't move yet. Waiting for Customer.
+                }
+
+                if ($isCustomer) {
+                    // Customer releases funds
+                    // IMPORTANT: We only transfer if the session is already marked as 'completed' by the therapist
+                    if ($booking->status !== 'completed') {
+                         return response()->json(['message' => 'Waiting for therapist to mark the service as completed first.'], 422);
+                    }
+
+                    if ($booking->payment_method === 'wallet' && $booking->payment_status === 'pending') {
+                        $customer = $booking->customer;
+                        if ($customer->wallet_balance < $booking->service_price) {
+                            throw new \Exception("Insufficient balance to release payment.");
+                        }
+
+                        // Atomic Transfer
+                        $customer->decrement('wallet_balance', $booking->service_price);
+                        
+                        // Increment Provider Earnings
+                        $provider = $booking->provider;
+                        $provider->increment('total_earnings', $booking->service_price);
+                        
+                        // ALSO increment the Therapist's personal WALLET balance
+                        $provider->user->increment('wallet_balance', $booking->service_price);
+                        
+                        $booking->update([
+                            'payment_status' => 'paid'
+                        ]);
+                    }
+                }
+            } elseif ($newStatus === 'cancelled') {
+                $booking->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                    'cancelled_by' => $isTherapist ? 'provider' : 'customer'
+                ]);
+                $booking->provider->update(['is_available' => true]);
+            }
+
+            DB::commit();
+            return response()->json([
+                'message' => 'Status updated successfully',
+                'booking' => $booking->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update status', 'error' => $e->getMessage()], 500);
+        }
     }
 
     /**

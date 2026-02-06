@@ -40,6 +40,7 @@ class User extends Authenticatable
         'pin_hash',
         'is_verified',
         'role',
+        'wallet_balance',
     ];
 
     /**
@@ -60,6 +61,7 @@ class User extends Authenticatable
     protected $casts = [
         'is_verified' => 'boolean',
         'date_of_birth' => 'date',
+        'wallet_balance' => 'decimal:2',
     ];
 
     /**

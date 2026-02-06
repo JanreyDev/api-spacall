@@ -145,6 +145,7 @@ class AuthController extends Controller
                 'pin_hash' => Hash::make($request->pin),
                 'is_verified' => true,
                 'role' => $request->role ?? 'client',
+                'wallet_balance' => ($request->role ?? 'client') === 'client' ? 5000 : 0,
             ]
         );
 
