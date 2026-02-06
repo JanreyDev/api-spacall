@@ -157,7 +157,19 @@ Fetch full details (bio, specializations, all services) before booking.
 
 ---
 
-## � 5. Booking Status Lifecycle
+## 💳 5. Customer Wallet System
+The app uses a virtual point system for bookings.
+
+- **Initial Balance**: New customers automatically receive **5,000 points**.
+- **Dual Confirmation Transfer**: 
+  - **Step 1 (Therapist)**: Marks status as `completed`. This ends the session and makes the therapist available for new jobs.
+  - **Step 2 (Customer)**: Marks status as `completed`. This **triggers the wallet transfer** (Deduction from Customer -> Addition to Therapist).
+- **Security**: Points are released ONLY when the Customer confirms.
+- **Rules**: Customers can only set statuses to `completed` or `cancelled`.
+
+---
+
+## 🔄 6. Booking Status Lifecycle
 Use this guide to handle app UI transitions (e.g., showing maps, buttons, or reviews).
 
 | Status | Meaning | App Behavior |
@@ -172,7 +184,7 @@ Use this guide to handle app UI transitions (e.g., showing maps, buttons, or rev
 
 ---
 
-## �🛠️ Testing Information
+## 🛠️ 7. Testing Information
 - **Base URL**: `http://localhost:8000/api`
 - **Required Headers**:
   - `Authorization: Bearer {token}`
