@@ -33,6 +33,7 @@ class User extends Authenticatable
         'mobile_number',
         'first_name',
         'last_name',
+        'middle_name',
         'gender',
         'date_of_birth',
         'profile_photo_url',
@@ -66,5 +67,10 @@ class User extends Authenticatable
     public function addresses(): HasMany
     {
         return $this->hasMany(UserAddress::class);
+    }
+
+    public function providers(): HasMany
+    {
+        return $this->hasMany(Provider::class);
     }
 }
