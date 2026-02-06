@@ -21,7 +21,7 @@ class BookingController extends Controller
     {
         $user = $request->user();
         
-        $query = Booking::with(['provider.user', 'service', 'location']);
+        $query = Booking::with(['customer', 'provider.user', 'service', 'location']);
 
         if ($user->role === 'therapist') {
             $provider = $user->providers()->first();

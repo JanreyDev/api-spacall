@@ -68,11 +68,15 @@ Authenticate an existing user.
 - **Description**: List all bookings made by the client.
 
 ### 2.2 Find Available Therapists
-- **GET** `/api/bookings/available-therapists`
-- **Parameters**: `latitude`, `longitude`, `radius` (km)
-- **Description**: Returns verified, active therapists within the specified range.
+Find therapists within a 10km radius.
+- **GET** `/api/bookings/available-therapists?latitude=14.5&longitude=120.9&radius=10`
 
-### 2.3 Create Immediate Booking
+### 2.3 View Single Therapist Details
+Fetch full details (bio, specializations, all services) before booking.
+- **GET** `/api/therapists/{uuid}`
+- **Description**: Use the `uuid` from the discovery list.
+
+### 2.4 Create Immediate Booking
 - **POST** `/api/bookings`
 - **Description**: Assigns a therapist and creates a booking record.
 - **Body**:
@@ -89,11 +93,11 @@ Authenticate an existing user.
   }
   ```
 
-### 2.4 Track Active Booking
+### 2.5 Track Active Booking
 - **GET** `/api/bookings/{id}/track`
 - **Description**: Returns live status and therapist GPS coordinates.
 
-### 2.5 Submit Review & Rating
+### 2.6 Submit Review & Rating
 - **POST** `/api/bookings/{id}/reviews`
 - **Description**: Rate the service (1-5) after status is `completed`.
 - **Body**:
@@ -110,7 +114,7 @@ Authenticate an existing user.
 
 ### 3.1 Manage My Jobs
 - **GET** `/api/bookings`
-- **Description**: List all bookings assigned to this therapist.
+- **Description**: List all bookings assigned to this therapist. Includes detailed customer and location information.
 
 ### 3.2 Update Booking Status
 - **PATCH** `/api/bookings/{id}/status`
@@ -139,7 +143,22 @@ Authenticate an existing user.
 
 ---
 
-## 🛠️ Testing Information
+## � 5. Booking Status Lifecycle
+Use this guide to handle app UI transitions (e.g., showing maps, buttons, or reviews).
+
+| Status | Meaning | App Behavior |
+| :--- | :--- | :--- |
+| `pending` | Just booked | Client waits for therapist to accept. |
+| `accepted` | Therapist confirmed | Therapist begins preparation. |
+| `en_route` | On the way | **Active Map Tracking** starts for Client. |
+| `arrived` | Outside home | Client gets "I'm here" notification. |
+| `in_progress` | Service started | Timer starts in both apps. |
+| `completed` | Done | Client is prompted to leave a **Review**. |
+| `cancelled` | Stopped | Therapist becomes available for new jobs. |
+
+---
+
+## �🛠️ Testing Information
 - **Base URL**: `http://localhost:8000/api`
 - **Required Headers**:
   - `Authorization: Bearer {token}`
