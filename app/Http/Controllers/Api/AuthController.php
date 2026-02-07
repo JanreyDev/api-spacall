@@ -119,6 +119,7 @@ class AuthController extends Controller
             'pin' => 'required|string|size:6',
             'profile_photo' => 'nullable|image|max:2048',
             'role' => 'nullable|in:client,therapist',
+            'customer_tier' => 'nullable|in:classic,vip',
         ]);
 
         if ($validator->fails()) {
@@ -145,6 +146,7 @@ class AuthController extends Controller
                 'pin_hash' => Hash::make($request->pin),
                 'is_verified' => true,
                 'role' => $request->role ?? 'client',
+                'customer_tier' => $request->customer_tier ?? User::TIER_CLASSIC,
                 'wallet_balance' => ($request->role ?? 'client') === 'client' ? 5000 : 0,
             ]
         );

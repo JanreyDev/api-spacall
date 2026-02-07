@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Booking extends Model
 {
     use HasFactory, SoftDeletes;
+ 
+    const TIER_CLASSIC = 'classic';
+    const TIER_VIP = 'vip';
 
     protected $fillable = [
         'booking_number',

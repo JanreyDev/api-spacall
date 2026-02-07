@@ -14,6 +14,9 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasApiTokens, SoftDeletes, HasRoles;
+ 
+    const TIER_CLASSIC = 'classic';
+    const TIER_VIP = 'vip';
 
     protected static function booted(): void
     {
@@ -41,6 +44,7 @@ class User extends Authenticatable
         'is_verified',
         'role',
         'wallet_balance',
+        'customer_tier',
     ];
 
     /**
