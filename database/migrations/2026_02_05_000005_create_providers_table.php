@@ -16,6 +16,7 @@ return new class extends Migration
             $table->enum('type', ['therapist', 'store']);
 
             $table->enum('verification_status', ['pending','under_review','verified','rejected','suspended'])->default('pending');
+            $table->foreignId('verified_by')->nullable()->constrained('users')->onDelete('set null');
             $table->text('rejection_reason')->nullable();
             $table->timestamp('verified_at')->nullable();
 
@@ -23,7 +24,8 @@ return new class extends Migration
             $table->string('business_registration_number')->nullable();
             $table->jsonb('business_hours')->nullable();
 
-            $table->decimal('commission_rate', 5, 2)->nullable();
+            $table->decimal('commission_rate', 5, 2)->default(15.00);
+            $table->decimal('total_earnings', 12, 2)->default(0.00);
 
             $table->decimal('average_rating', 3, 2)->default(0.00);
             $table->unsignedInteger('total_reviews')->default(0);
@@ -31,7 +33,10 @@ return new class extends Migration
             $table->unsignedInteger('completed_bookings')->default(0);
 
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_available')->default(true);
             $table->boolean('is_accepting_bookings')->default(false);
+            $table->boolean('accepts_home_service')->default(true);
+            $table->boolean('accepts_store_service')->default(false);
 
             $table->timestamps();
             $table->softDeletes();

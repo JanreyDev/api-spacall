@@ -13,19 +13,32 @@ return new class extends Migration
             $table->id();
             $table->foreignId('provider_id')->constrained()->onDelete('cascade');
 
-            $table->string('specialization')->nullable();
+            // Professional Details
+            $table->jsonb('specializations')->nullable();
             $table->text('bio')->nullable();
             $table->unsignedInteger('years_of_experience')->nullable();
             $table->jsonb('certifications')->nullable();
+            $table->jsonb('languages_spoken')->nullable();
+            $table->text('professional_photo_url')->nullable();
 
+            // Licensing
+            $table->string('license_number')->nullable();
+            $table->string('license_type')->nullable();
+            $table->date('license_expiry_date')->nullable();
+
+            // Pricing & Service Radius
+            $table->decimal('base_rate', 10, 2)->default(0);
             $table->unsignedInteger('service_radius_km')->default(5);
-            $table->decimal('base_latitude', 10, 7)->nullable();
-            $table->decimal('base_longitude', 10, 7)->nullable();
+
+            // Location
+            $table->decimal('base_location_latitude', 10, 7)->nullable();
+            $table->decimal('base_location_longitude', 10, 7)->nullable();
             $table->string('base_address')->nullable();
 
-            $table->jsonb('available_days')->nullable();
-            $table->time('available_from')->nullable();
-            $table->time('available_until')->nullable();
+            // Availability & Equipment
+            $table->jsonb('default_schedule')->nullable();
+            $table->boolean('has_own_equipment')->default(true);
+            $table->jsonb('equipment_list')->nullable();
 
             $table->timestamps();
 
@@ -38,8 +51,8 @@ return new class extends Migration
 CREATE OR REPLACE FUNCTION update_therapist_base_location()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.base_latitude IS NOT NULL AND NEW.base_longitude IS NOT NULL THEN
-        NEW.base_location = ST_SetSRID(ST_MakePoint(NEW.base_longitude, NEW.base_latitude), 4326)::geography;
+    IF NEW.base_location_latitude IS NOT NULL AND NEW.base_location_longitude IS NOT NULL THEN
+        NEW.base_location = ST_SetSRID(ST_MakePoint(NEW.base_location_longitude, NEW.base_location_latitude), 4326)::geography;
     END IF;
     RETURN NEW;
 END;
